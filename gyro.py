@@ -31,16 +31,16 @@ class Gyro():
         self.last_us = int(time.time() * 1000000)
         self.last_angle = 0
         self.last_angle_speed = 0
-        _thread.start_new_thread(self.run, ())
+        # _thread.start_new_thread(self.run, ())
         displayer.show("Calibrate DONE!")
 
     def run(self):
         """Continuously checks the gyro's angle."""
         while True:
             self.check_degree()
-            time.sleep_ms(10)
+            time.sleep_ms(1)
 
-    def check_degree(self):
+    def degree(self):
         """Keep checking the gyro's angle."""
         if self.imu.gyro.data_ready():
             self.imu.gyro.read()
@@ -52,8 +52,9 @@ class Gyro():
         angle = self.last_angle + angle_moved
         self.last_us = now_us
         self.last_angle = angle
+        return angle
 
-    def degree(self):
+    def degree_backup(self):
         """Returns the gyro's angle."""
         return self.last_angle
 
