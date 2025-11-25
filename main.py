@@ -15,10 +15,10 @@ soundSensor = SoundSensor()
 timer = Timer(gyro)
 MOTOR_SPEED=3000   # max: 6000
 SLOW_MOTOR_SPEED=1000
-TURN_SPEED=440
+TURN_SPEED=500
 TURN_ANGLE_ADJUST=3.0
 ANGLE_OFF_ALLOWED=0.25
-SPEED_ADJUST=100  # speed adjustment for angle off
+SPEED_ADJUST=200  # speed adjustment for angle off
 encoders = robot.Encoders() # 0.0287cm/count
 motors = robot.Motors()
 CM_PER_COUNT = 0.0287
@@ -86,46 +86,48 @@ def drive(distance, target_angle): #move certain distance at certain angle
 def check_gate():
     """Check the gate. return true if the gate is safe to pass"""
     displayer.show("check gate")
-    motors.set_speeds(SLOW_MOTOR_SPEED, SLOW_MOTOR_SPEED)
-    while 20 < soundSensor.distance_cm() < 50:
-        timer.sleep_ms(1)  # pylint: disable=no-member
+    distance = soundSensor.distance_cm()
+    if distance < 50:
+        drive(distance - 10, 0)
 
-    motors.off()
-    timer.sleep_ms(100)  # pylint: disable=no-member
-    displayer.show("check gate1: " + str(soundSensor.distance_cm()))
-
-    if soundSensor.distance_cm() > 50:
-        turn(10)
-        if soundSensor.distance_cm() > 50:
-            turn(-10)
-            return soundSensor.distance_cm() > 50
-    return False
+    turn(10)
+    if soundSensor.distance_cm() < 20:
+        right(-90)
+        drive(5, -90)
+    turn(-10)
+    if soundSensor.distance_cm() < 20:
+        left(90)
+        drive(5, 90)
+    turn(0)
 
 def aim_gate():
     """Aim the robot to the gate."""
-    right(-90)
+    turn(-90)
     motors.set_speeds(-TURN_SPEED, TURN_SPEED)
     distance = soundSensor.distance_cm()
-    while distance > 50:  # look for the inner bottle
-        timer.sleep_ms(1)
+    angle = gyro.degree()
+    while distance > 75:  # look for the inner bottle
+        angle = gyro.degree()
+        distance = soundSensor.distance_cm()
+    motors.off()
+    timer.sleep_ms(100)
+    if angle > -25: # the bot is outside of the inner bottle
+        turn(90)
+        drive(distance * math.sin(math.radians(angle)) + 15, 90)
+
+    turn(90)
+    motors.set_speeds(TURN_SPEED, -TURN_SPEED)
+    distance = soundSensor.distance_cm()
+    angle = gyro.degree()
+    while distance > 75:  # look for the outer bottle
+        angle = gyro.degree()
         distance = soundSensor.distance_cm()
     motors.off()
     timer.sleep_ms(100)
 
-    drive(distance - 25, gyro.degree())
-    displayer.show("first:" + gyro.degree())
-
-    left(90)
-    motors.set_speeds(TURN_SPEED, -TURN_SPEED)
-    distance = soundSensor.distance_cm()
-    while distance > 50:  # look for the inner bottle
-        timer.sleep_ms(1)
-        distance = soundSensor.distance_cm()
-    motors.off()
-    timer.sleep_ms(100)  # pylint: disable=no-member
-
-    drive(distance - 25, gyro.degree())
-    displayer.show("second:" + gyro.degree())
+    if angle < 25: # the bot is outside of the outer bottle
+        turn(-90)
+        drive(distance * math.sin(math.radians(-angle)) + 15, 90)
 
     turn(0)
     check_gate()
@@ -143,6 +145,7 @@ while True:
         timer.sleep_ms(500)  # pylint: disable=no-member
         ############
         drive(distance_to_gate, angle_to_gate)
+        timer.sleep_ms(5000)
         aim_gate()
         time_remain = TARGET_TIME_MS - millis() - start
         # calculate wait time assuming 1 second for passing gate and 1 second per meter
@@ -150,6 +153,6 @@ while True:
         timer.sleep_ms(wait_time)  # pylint: disable=no-member
         drive(40, 0)
         timer.sleep_ms(wait_time)  # pylint: disable=no-member
-        right(-angle_to_gate)
+        turn(-angle_to_gate)
         timer.sleep_ms(wait_time)  # pylint: disable=no-member
 #     drive(distance_to_gate, -angle_to_gate)

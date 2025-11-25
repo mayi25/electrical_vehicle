@@ -9,26 +9,23 @@ class Gyro():
     """A class to represent the robot's gyro."""
 
     def __init__(self, displayer: Displayer):
-        """Initializes the gyro."""
-        super().__init__()
         self.imu = robot.IMU()
         self.imu.reset()
         self.imu.enable_default()
-        self.displayer = displayer
 
         displayer.show("Calibrate in 2s")
-        time.sleep(2)
+        time.sleep_ms(2000)
         displayer.show("Calibrating...")
-        start_ms = int(time.time() * 1000)
+        start_ms = time.ticks_ms()
         self.adjustment_per_second = 0.0
         reading_count = 0
-        while int(time.time() * 1000) - start_ms < 1000:
-            if self.imu.gyro.data_ready():
-                self.imu.gyro.read()
-                self.adjustment_per_second += self.imu.gyro.last_reading_dps[2]
-                reading_count += 1
+        while time.ticks_diff(time.ticks_ms(), start_ms) < 1000:
+          if self.imu.gyro.data_ready():
+            self.imu.gyro.read()
+            self.adjustment_per_second += self.imu.gyro.last_reading_dps[2]
+            reading_count += 1
         self.adjustment_per_second /= reading_count
-        self.last_us = int(time.time() * 1000000)
+        self.last_us = time.ticks_us()
         self.last_angle = 0
         self.last_angle_speed = 0
         # _thread.start_new_thread(self.run, ())
@@ -41,18 +38,18 @@ class Gyro():
             time.sleep_ms(1)
 
     def degree(self):
-        """Keep checking the gyro's angle."""
         if self.imu.gyro.data_ready():
-            self.imu.gyro.read()
-            self.last_angle_speed = self.imu.gyro.last_reading_dps[2] - self.adjustment_per_second
-
-        now_us = int(time.time() * 1000000)
+          self.imu.gyro.read()
+          self.last_angle_speed = self.imu.gyro.last_reading_dps[2] - self.adjustment_per_second
+          
+        now_us = time.ticks_us()
         time_passed = (now_us - self.last_us) / 1000000.0
         angle_moved = self.last_angle_speed * time_passed
-        angle = self.last_angle + angle_moved
+        angle = self.last_angle + angle_moved        
         self.last_us = now_us
         self.last_angle = angle
         return angle
+
 
     def degree_backup(self):
         """Returns the gyro's angle."""
