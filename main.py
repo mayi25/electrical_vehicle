@@ -107,12 +107,16 @@ def aim_gate():
     """Aim the robot to the gate."""
     turn(0)
     distance = soundSensor.distance_cm()
-    # if see the inner bottle, move left 2cm till there is no bottle ahead.
-    while distance < 50:
+    if 15 < distance < 50:
+        drive(distance - 15, 0)
+    # if see the inner bottle, move left 3cm, try 3 times maximum
+    count = 0
+    while distance < 50 and count < 3:
         turn(90)
-        drive(2, 90)
+        drive(3, 90)
         turn(0)
         distance = soundSensor.distance_cm()
+        count = count + 1
     pass_gate()
 
 def millis():
@@ -122,7 +126,12 @@ def millis():
 displayer.show("press B to start.")
 
 while True:
-    gyro.degree()
+    if abs(gyro.degree()) > 1:
+        displayer.show("Angle off, reset!")
+        break
+    if button_c.check():
+        while True:
+            displayer.show("distance:" + str(soundSensor.distance_cm()))
     if button_b.check():
         displayer.show("GOOD LUCK!")
         start = millis()
