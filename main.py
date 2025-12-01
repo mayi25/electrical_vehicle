@@ -1,4 +1,5 @@
 """ electrical vehicle """
+# !pylint main.py
 import math
 import time
 from pololu_3pi_2040_robot import robot
@@ -127,7 +128,7 @@ displayer.show("press B to start.")
 
 while True:
     if abs(gyro.degree()) > 1:
-        displayer.show("Angle off, reset!")
+        displayer.show("Gyro off, reset!")
         break
     if button_c.check():
         while True:
@@ -139,12 +140,12 @@ while True:
         ############
         drive(distance_to_gate, angle_to_gate)
         aim_gate()
-        time_remain = TARGET_TIME_MS - millis() - start
+        time_remain = TARGET_TIME_MS - millis() + start
         # calculate wait time assuming 1 second for passing gate and 1 second per meter
-        wait_time = min(2500, (time_remain - distance_to_gate / 0.1 - 1000) / 3)
+        wait_time = min(2500, (time_remain - distance_to_gate * 15 - 1000) / 3)
         timer.sleep_ms(wait_time)
-        drive(26, 0)
+        drive(26, 0) # cross the gate
         timer.sleep_ms(wait_time)
         turn(-angle_to_gate)
         timer.sleep_ms(wait_time)
-        drive(distance_to_gate, -angle_to_gate)
+        drive(distance_to_gate, -angle_to_gate - 1.5)
