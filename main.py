@@ -26,7 +26,7 @@ encoders = robot.Encoders() # 0.0287cm/count
 motors = robot.Motors()
 CM_PER_COUNT = 0.0287
 HALF_GATE_DISTANCE = 10
-TARGET_DISTANCE = 700 # cm CHANGE BOBBY
+TARGET_DISTANCE = 1000 # cm CHANGE BOBBY
 TARGET_TIME_MS = 10000 # cm CHANGE BOBBY
 
 
@@ -102,12 +102,6 @@ def pass_gate():
     distance = soundSensor.distance_cm()
     if 15 < distance < 50:
         drive(distance - 15, 0)
-    # check the outer bottle
-    turn(10)
-    distance = soundSensor.distance_cm()
-    if distance < 50:
-        right(-90)
-        drive(10 - distance * math.sin(math.radians(10)), -90)
 
     # check the inner bottle
     turn(-10)
@@ -117,29 +111,15 @@ def pass_gate():
         drive(10 - distance * math.sin(math.radians(10)), 90)
     turn(0)
 
-def aim_gate():
-    """Aim the robot to the gate."""
-    turn(0)
-    distance = soundSensor.distance_cm()
-    if 15 < distance < 50:
-        drive(distance - 15, 0)
-    # if see the inner bottle, move left 3cm, try 3 times maximum
-    count = 0
-    while distance < 50 and count < 3:
-        turn(90)
-        drive(3, 90)
-        turn(0)
-        distance = soundSensor.distance_cm()
-        count = count + 1
-    pass_gate()
-
 def millis():
     ''' return time in milliseconds '''
     return int(time.time() * 1000)
 
+
 displayer.show("press B to start.")
 
 while True:
+    gyro.degree()
     if button_a.check():
         HALF_GATE_DISTANCE += 5
         displayer.show("gate: " + str(HALF_GATE_DISTANCE * 2) + "cm")
@@ -149,10 +129,10 @@ while True:
     if button_b.check():
         displayer.show("GOOD LUCK!")
         start = millis()
-        timer.sleep_ms(200)
+        timer.sleep_ms(500)
         ############
         # 1cm per degree per meter. i.e. 7cms per 7 meter.
-        drive(distance_to_gate(), angle_to_gate() + 1.0)
+        drive(distance_to_gate(), angle_to_gate())
         pass_gate()
         time_remain = TARGET_TIME_MS - millis() + start
         # calculate wait time assuming 1 second for passing gate and 1 second per meter
