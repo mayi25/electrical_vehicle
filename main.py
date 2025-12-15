@@ -1,5 +1,5 @@
 """ electrical vehicle """
-# !pylint main.py
+# !pylint /media/mayi/MicroPython/main.py
 import math
 import time
 from pololu_3pi_2040_robot import robot
@@ -9,6 +9,7 @@ from sound_sensor import SoundSensor
 from timer import Timer
 
 #initalizing variables
+button_a = robot.ButtonA()
 button_b = robot.ButtonB()
 button_c = robot.ButtonC()
 displayer: Displayer = Displayer() #display pannel
@@ -24,10 +25,19 @@ SPEED_ADJUST=200  # speed adjustment for angle off
 encoders = robot.Encoders() # 0.0287cm/count
 motors = robot.Motors()
 CM_PER_COUNT = 0.0287
+HALF_GATE_DISTANCE = 10
 TARGET_DISTANCE = 700 # cm CHANGE BOBBY
 TARGET_TIME_MS = 10000 # cm CHANGE BOBBY
-distance_to_gate = math.sqrt(TARGET_DISTANCE*TARGET_DISTANCE/4 + 90 * 90) - 8
-angle_to_gate = math.degrees(math.atan(180/TARGET_DISTANCE))  # =(100-10)/(target/2)
+
+
+def distance_to_gate() -> float:
+    """distance_to_gate."""
+    return math.sqrt(TARGET_DISTANCE*TARGET_DISTANCE/4 +
+                     (100 - HALF_GATE_DISTANCE) * (100 - HALF_GATE_DISTANCE)) - 8
+
+def angle_to_gate() -> float:
+    """angle_to_gate."""
+    return math.degrees(math.atan(2 * (100-HALF_GATE_DISTANCE)/ TARGET_DISTANCE))
 
 def left(target_angle):
     """Turn left to the target angle."""
@@ -89,19 +99,22 @@ def pass_gate():
     """Slow pass the gate assuming it is in the middle of the gate"""
     displayer.show("pass gate!")
 
+    distance = soundSensor.distance_cm()
+    if 15 < distance < 50:
+        drive(distance - 15, 0)
     # check the outer bottle
     turn(10)
     distance = soundSensor.distance_cm()
     if distance < 50:
         right(-90)
-        drive(7 - distance * math.sin(math.radians(10)), -90)
+        drive(10 - distance * math.sin(math.radians(10)), -90)
 
     # check the inner bottle
     turn(-10)
     distance = soundSensor.distance_cm()
     if distance < 50:
         left(90)
-        drive(7 - distance * math.sin(math.radians(10)), 90)
+        drive(10 - distance * math.sin(math.radians(10)), 90)
     turn(0)
 
 def aim_gate():
@@ -127,25 +140,27 @@ def millis():
 displayer.show("press B to start.")
 
 while True:
-    if abs(gyro.degree()) > 1:
-        displayer.show("Gyro off, reset!")
-        break
+    if button_a.check():
+        HALF_GATE_DISTANCE += 5
+        displayer.show("gate: " + str(HALF_GATE_DISTANCE * 2) + "cm")
     if button_c.check():
         while True:
             displayer.show("distance:" + str(soundSensor.distance_cm()))
     if button_b.check():
         displayer.show("GOOD LUCK!")
         start = millis()
-        timer.sleep_ms(500)
+        timer.sleep_ms(200)
         ############
-        drive(distance_to_gate, angle_to_gate)
-        aim_gate()
+        # 1cm per degree per meter. i.e. 7cms per 7 meter.
+        drive(distance_to_gate(), angle_to_gate() + 1.0)
+        pass_gate()
         time_remain = TARGET_TIME_MS - millis() + start
         # calculate wait time assuming 1 second for passing gate and 1 second per meter
-        wait_time = min(2500, (time_remain - distance_to_gate * 15 - 1000) / 3)
+        wait_time = min(2500, (time_remain - distance_to_gate() * 15 - 1000) / 3)
         timer.sleep_ms(wait_time)
         drive(26, 0) # cross the gate
         timer.sleep_ms(wait_time)
-        turn(-angle_to_gate)
+        turn(-(angle_to_gate()))
         timer.sleep_ms(wait_time)
-        drive(distance_to_gate, -angle_to_gate - 1.5)
+        # 1cm per degree per meter. i.e. 7cms per 7 meter.
+        drive(distance_to_gate(), -(angle_to_gate()))
